@@ -1,7 +1,7 @@
 """User-facing routes, as defined in sqr-066 (https://sqr-066.lsst.io)"""
-import asyncio
 from typing import List
 
+from aiojobs import Scheduler
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 from safir.dependencies.logger import logger_dependency
@@ -11,6 +11,8 @@ from sse_starlette.sse import EventSourceResponse
 from structlog.stdlib import BoundLogger
 
 from ..config import config  # Safir config
+from ..dependencies.jobs import scheduler_dependency
+from ..dependencies.token import token_dependency, user_dependency
 from ..models.index import Index
 from ..models.v1.external.prepuller import (
     PrepulledImageDisplayList,
@@ -18,8 +20,6 @@ from ..models.v1.external.prepuller import (
 )
 from ..models.v1.external.userdata import LabSpecification, UserData, UserInfo
 from ..runtime.labs import check_for_user, get_active_users, labs
-from ..runtime.tasks import manage_task
-from ..runtime.token import get_user_from_token
 from ..services.events import user_event_publisher
 from ..services.form import generate_user_lab_form
 from ..services.prepuller import get_current_image_and_node_state
@@ -55,12 +55,10 @@ async def get_user_events(
     summary="Get lab form for user",
 )
 async def get_user_lab_form(
-    request: Request,
+    user: UserInfo = Depends(user_dependency),
     logger: BoundLogger = Depends(logger_dependency),
 ) -> str:
     """Requires exec:notebook and valid token."""
-    token = request.headers.get("X-Auth-Request-Token")
-    user = await get_user_from_token(token)
     return generate_user_lab_form(user)
 
 
@@ -103,20 +101,21 @@ async def get_userdata(username: str) -> UserData:
 async def post_new_lab(
     request: Request,
     lab: LabSpecification,
-    user: UserInfo,
+    token: str = Depends(token_dependency),
+    user: UserInfo = Depends(user_dependency),
+    scheduler: Scheduler = Depends(scheduler_dependency),
     logger: BoundLogger = Depends(logger_dependency),
 ) -> str:
     """POST body is a LabSpecification.  Requires exec:notebook and valid
     user token."""
-    token = request.headers.get("X-Auth-Request-Token")
-    user = await get_user_from_token(token)
+    # We actually need the token itself, not just the user it points to,
+    # because we pass the token down to the spawned lab.
     username = user.username
     lab_exists = check_for_user(username)
     if lab_exists:
         raise RuntimeError(f"lab already exists for {username}")
     logger.debug(f"Received creation request for {username}")
-    task = asyncio.create_task(create_lab_environment(user, lab, token))
-    manage_task(task)
+    await scheduler.spawn(create_lab_environment(user, lab, token))
     return f"/nublado/spawner/v1/labs/{username}"
 
 
@@ -129,10 +128,10 @@ async def post_new_lab(
 async def delete_user_lab(
     username: str,
     logger: BoundLogger = Depends(logger_dependency),
+    scheduler: Scheduler = Depends(scheduler_dependency),
 ) -> None:
     """Requires admin:jupyterlab"""
-    task = asyncio.create_task(delete_lab_environment(username))
-    manage_task(task)
+    await scheduler.spawn(delete_lab_environment(username))
     return
 
 
@@ -142,12 +141,10 @@ async def delete_user_lab(
     summary="Get status for user",
 )
 async def get_user_status(
-    request: Request,
+    user: UserInfo = Depends(user_dependency),
     logger: BoundLogger = Depends(logger_dependency),
 ) -> UserData:
     """Requires exec:notebook and valid token."""
-    token = request.headers.get("X-Auth-Request-Token")
-    user = await get_user_from_token(token)
     return labs[user.username]
 
 
