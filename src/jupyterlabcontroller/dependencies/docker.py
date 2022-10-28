@@ -1,14 +1,15 @@
 import base64
 import json
-from typing import Dict, Optional
+from typing import Optional
 
 from ..models.v1.domain.docker import DockerCredentials as DC
+from ..models.v1.domain.docker import DockerMap
 
 
 class DockerCredentialsDependency:
-    docker_credentials: Optional[Dict[str, DC]] = None
+    docker_credentials: Optional[DockerMap] = None
 
-    async def __call__(self) -> Dict[str, DC]:
+    async def __call__(self) -> DockerMap:
         if self.docker_credentials is None:
             self.docker_credentials = {}
             try:

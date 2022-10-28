@@ -1,3 +1,5 @@
+from typing import Dict, TypeAlias
+
 from pydantic import BaseModel
 
 
@@ -5,6 +7,9 @@ class DockerCredentials(BaseModel):
     registry_host: str
     username: str
     password: str
+
+
+DockerMap: TypeAlias = Dict[str, DockerCredentials]
 
 
 class DockerRegistryError(Exception):
