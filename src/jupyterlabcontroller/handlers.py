@@ -7,20 +7,18 @@ from fastapi.responses import RedirectResponse
 from safir.dependencies.logger import logger_dependency
 from safir.metadata import Metadata, get_metadata
 from safir.models import ErrorModel
-from sse_starlette.sse import EventSourceResponse
-from storage.prepuller import PrepullerClient
 from structlog.stdlib import BoundLogger
 
 from .dependencies.config import configuration_dependency
-from .dependencies.event import event_manager_dependency
+from .dependencies.events import event_manager_dependency
 from .dependencies.form import form_manager_dependency
-from .dependencies.lab import lab_client_dependency, user_labs_dependency
+from .dependencies.labs import lab_client_dependency, user_labs_dependency
 from .dependencies.prepuller import prepuller_client_dependency
 from .dependencies.scheduler import scheduler_dependency
 from .dependencies.token import user_dependency
 from .models.index import Index
 from .models.v1.domain.config import Config
-from .models.v1.domain.lab import LabMap
+from .models.v1.domain.labs import LabMap
 from .models.v1.external.prepuller import (
     PrepulledImageDisplayList,
     PrepullerStatus,
@@ -35,6 +33,9 @@ from .services.labs import check_for_user, get_active_users
 from .storage.events import EventManager
 from .storage.form import FormManager
 from .storage.lab import LabClient
+from .storage.prepuller import PrepullerClient
+
+# from sse_starlette.sse import EventSourceResponse
 
 # FastAPI routers
 external_router = APIRouter()
@@ -53,9 +54,11 @@ internal_router = APIRouter()
 async def get_user_events(
     username: str,
     event_manager: EventManager = Depends(event_manager_dependency),
-) -> EventSourceResponse:
+) -> None:
     """Requires exec:notebook and valid user token"""
-    return event_manager_dependency.user_event_publisher(username)
+    # should return EventSourceResponse:
+    # return event_manager.user_event_publisher(username)
+    pass
 
 
 #

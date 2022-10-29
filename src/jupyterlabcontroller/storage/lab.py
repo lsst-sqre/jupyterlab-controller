@@ -8,7 +8,6 @@ from kubernetes_asyncio.client.models import V1Namespace, V1ObjectMeta
 from kubernetes_asyncio.client.rest import ApiException
 from structlog.stdlib import BoundLogger
 
-from ...services.labels import std_annotations, std_labels
 from ..models.v1.domain.config import Config
 from ..models.v1.external.userdata import (
     LabSpecification,
@@ -16,6 +15,7 @@ from ..models.v1.external.userdata import (
     UserInfo,
     UserMap,
 )
+from ..services.labels import std_annotations, std_labels
 from ..services.quota import quota_from_size
 
 

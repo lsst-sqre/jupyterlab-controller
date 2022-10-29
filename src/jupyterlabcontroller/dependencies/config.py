@@ -18,6 +18,7 @@ class ConfigurationDependency:
         self, logger: BoundLogger = Depends(logger_dependency)
     ) -> Config:
         self._logger = logger
+        assert self._logger is not None
         return self.config()
 
     def config(self) -> Config:

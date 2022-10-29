@@ -8,7 +8,7 @@ from structlog.stdlib import BoundLogger
 from ..models.v1.domain.config import Config
 from ..models.v1.domain.labs import LabMap
 from ..models.v1.external.userdata import UserInfo
-from ..storage.labs import LabClient
+from ..storage.lab import LabClient
 from .config import configuration_dependency
 from .k8s import k8s_api_dependency
 from .namespace import namespace_dependency
@@ -47,6 +47,7 @@ class LabClientDependency:
                 namespace=namespace,
                 config=config,
             )
+        assert self._client is not None  # Thanks, mypy
         return self._client
 
     def client(
@@ -68,7 +69,6 @@ class LabClientDependency:
             namespace=namespace,
             config=config,
         )
-        return self._client
 
 
 lab_client_dependency = LabClientDependency()
