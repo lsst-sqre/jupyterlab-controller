@@ -33,6 +33,7 @@ from .models.v1.external.userdata import (
 )
 from .services.labs import check_for_user, get_active_users
 from .storage.events import EventManager
+from .storage.form import FormManager
 from .storage.lab import LabClient
 
 # FastAPI routers
@@ -65,7 +66,7 @@ async def get_user_events(
     summary="Get lab form for user",
 )
 async def get_user_lab_form(
-    form_manager=Depends(form_manager_dependency),
+    form_manager: FormManager = Depends(form_manager_dependency),
 ) -> str:
     """Requires exec:notebook and valid token."""
     return form_manager.generate_user_lab_form()
@@ -114,6 +115,7 @@ async def get_userdata(
 )
 async def post_new_lab(
     lab: LabSpecification,
+    labmap: LabMap = Depends(user_labs_dependency),
     user: UserInfo = Depends(user_dependency),
     client: LabClient = Depends(lab_client_dependency),
     scheduler: Scheduler = Depends(scheduler_dependency),
@@ -122,7 +124,7 @@ async def post_new_lab(
     """POST body is a LabSpecification.  Requires exec:notebook and valid
     user token."""
     username = user.username
-    lab_exists = check_for_user(username)
+    lab_exists = check_for_user(username, labmap)
     if lab_exists:
         raise RuntimeError(f"lab already exists for {username}")
     logger.debug(f"Received creation request for {username}")

@@ -38,7 +38,15 @@ class LabClientDependency:
         config: Config = Depends(configuration_dependency),
     ) -> LabClient:
         if self._client is None:
-            self.client()
+            self.client(
+                user=user,
+                token=token,
+                logger=logger,
+                labs=labs,
+                k8s_api=k8s_api,
+                namespace=namespace,
+                config=config,
+            )
         return self._client
 
     def client(

@@ -8,6 +8,7 @@ from ..models.v1.domain.config import Config
 from ..models.v1.external.userdata import UserInfo
 from ..storage.form import FormManager
 from ..storage.labs import LabClient
+from .config import configuration_dependency
 from .token import user_dependency
 
 
@@ -18,16 +19,16 @@ class FormManagerDependency:
         self,
         user: UserInfo = Depends(user_dependency),
         logger: BoundLogger = Depends(logger_dependency),
+        config: Config = Depends(configuration_dependency),
     ) -> LabClient:
         if self._manager is None:
-            self.manager()
+            self.manager(user=user, logger=logger, config=config)
         return self._manager
 
     def manager(
         self, user: UserInfo, logger: BoundLogger, config: Config
     ) -> None:
         self._manager = FormManager(user=user, logger=logger, config=config)
-        return self._manager
 
 
 form_manager_dependency = FormManagerDependency()

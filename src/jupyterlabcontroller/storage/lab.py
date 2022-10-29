@@ -35,8 +35,9 @@ class LabClient:
         self.logger = logger
         self.labs = labs
         self.k8s_api = k8s_api
-        self.api = self.CoreV1Api(self.k8s_api)
+        self.api = self.k8s_api("CoreV1Api")
         self.namespace = namespace
+        self.config = config
 
     async def create_lab_environment(
         self,
@@ -67,7 +68,7 @@ class LabClient:
         self.labs[username].events = deque()
         return
 
-    async def create_user_namespace(self) -> str:
+    async def create_user_namespace(self) -> None:
 
         try:
             await asyncio.wait_for(
