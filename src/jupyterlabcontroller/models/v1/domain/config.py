@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, TypeAlias, Union
 
 import yaml
 from pydantic import BaseModel, validator
-from structlog.stdlib import BoundLogger
 
 from ..external.prepuller import Config as ExternalPrepullerConfig
 from ..external.userdata import UserEnv
@@ -206,7 +205,6 @@ class Config(BaseModel):
     def from_file(
         cls,
         filename: str,
-        logger: BoundLogger,
     ) -> Config:
         config_obj: Dict[Any, Any] = yaml.safe_load(filename)
         with open(filename) as f:
