@@ -14,11 +14,16 @@ from httpx import AsyncClient
 from jupyterlabcontroller import main
 from jupyterlabcontroller.models.v1.domain.config import Config
 
-from .settings import config_config
+from .settings import TestObjectFactory, config_config, test_object_factory
 
 _here = dirname(__file__)
 
 STDCONFDIR = f"{_here}/configs/standard"
+
+
+@pytest.fixture
+def obj_factory() -> TestObjectFactory:
+    return test_object_factory
 
 
 @pytest.fixture
