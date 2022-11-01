@@ -210,7 +210,3 @@ class LabClient:
         return V1ObjectMeta(
             name=name, labels=std_labels(), annotations=std_annotations()
         )
-
-
-class Watcher:
-    pass  # use Russ's

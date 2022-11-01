@@ -1,17 +1,38 @@
-"""Set the configuration, and build a factory for producing test objects."""
+"""Set the configuration, and build factories for producing test
+dependencies and objects."""
 
-from typing import Any, Dict, List
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+import structlog
+from aiojobs import Scheduler
+from httpx import AsyncClient
+from kubernetes_asyncio.client import ApiClient
+from kubernetes_asyncio.client.models import V1ContainerImage
+from structlog.stdlib import BoundLogger
 
 from jupyterlabcontroller.dependencies.config import configuration_dependency
-from jupyterlabcontroller.models.v1.consts import lab_statuses, pod_states
+from jupyterlabcontroller.models.v1.consts import (
+    DOCKER_SECRETS_PATH,
+    lab_statuses,
+    pod_states,
+)
 from jupyterlabcontroller.models.v1.domain.config import Config
 from jupyterlabcontroller.models.v1.domain.labs import LabMap
+from jupyterlabcontroller.models.v1.domain.prepuller import NodeContainers
+from jupyterlabcontroller.models.v1.external.event import EventMap
 from jupyterlabcontroller.models.v1.external.userdata import (
     LabSpecification,
     UserData,
     UserInfo,
     UserQuota,
 )
+from jupyterlabcontroller.storage.docker import DockerClient
+from jupyterlabcontroller.storage.events import EventManager
+from jupyterlabcontroller.storage.prepuller import PrepullerClient
 from jupyterlabcontroller.utils import memory_string_to_int
 
 
@@ -29,6 +50,69 @@ def config_config(config_path: str) -> Config:
         f"{config_path}/config.yaml"
     )
     return configuration_dependency.config()
+
+
+# Factory to manufacture FastAPI dependency equivalent objects (but only
+# the ones that are not really request-dependent)
+@dataclass
+class TestDependencyFactory:
+    config: Config
+    httpx_client: AsyncClient
+    logger: BoundLogger
+    docker_client: DockerClient
+    event_manager: EventManager
+    k8s_client: ApiClient
+    prepuller_client: PrepullerClient
+    scheduler: Scheduler
+
+    @classmethod
+    def initialize(
+        cls, config: Config, httpx_client: AsyncClient
+    ) -> TestDependencyFactory:
+
+        logger = structlog.get_logger(name=config.safir.logger_name)
+
+        # Docker Client
+        modified_cfg_dir: Optional[str] = os.getenv(
+            "JUPYTERLAB_CONTROLLER_CONFIGURATION_DIR"
+        )
+        secrets_path: str = DOCKER_SECRETS_PATH
+        if modified_cfg_dir:
+            secrets_path = "{modified_cfg_dir}/docker_config.json"
+        docker_client = DockerClient(
+            logger=logger,
+            config=config,
+            http_client=httpx_client,
+            secrets_path=secrets_path,
+        )
+
+        # Event Manager
+        em: EventMap = {}
+        event_manager = EventManager(logger=logger, events=em)
+
+        # K8s client
+        k8s_client = ApiClient()
+
+        # Prepuller client
+        prepuller_client = PrepullerClient(
+            logger=logger,
+            config=config,
+            docker_client=docker_client,
+            api=k8s_client,
+        )
+
+        # Scheduler
+        scheduler = Scheduler(close_timeout=config.kubernetes.request_timeout)
+        return cls(
+            config=config,
+            httpx_client=httpx_client,
+            logger=logger,
+            docker_client=docker_client,
+            event_manager=event_manager,
+            k8s_client=k8s_client,
+            prepuller_client=prepuller_client,
+            scheduler=scheduler,
+        )
 
 
 # Factory to manufacture test objects
@@ -106,6 +190,38 @@ class TestObjectFactory:
             },
         ],
         "lab_specification": [],
+        "node_contents": {
+            "node1": [
+                {
+                    "names": [
+                        "library/sketchbook:latest_daily",
+                        "library/sketchbook:d_2077_10_23",
+                        "library/sketchbook@sha256:1234",
+                    ],
+                    "sizeBytes": 69105,
+                },
+                {
+                    "names": [
+                        "library/sketchbook:latest_weekly",
+                        "library/sketchbook:w_2077_43",
+                        "library/sketchbook:recommended",
+                        "library/sketchbook@sha256:5678",
+                    ],
+                    "sizeBytes": 65537,
+                },
+            ],
+            "node2": [
+                {
+                    "names": [
+                        "library/sketchbook:latest_weekly",
+                        "library/sketchbook:w_2077_43",
+                        "library/sketchbook:recommended",
+                        "library/sketchbook@sha256:5678",
+                    ],
+                    "sizeBytes": 65537,
+                },
+            ],
+        },
     }
 
     def canonicalize(self) -> None:
@@ -127,6 +243,13 @@ class TestObjectFactory:
                     memfld = q[i]["memory"]
                     if type(memfld) is str:
                         q[i]["memory"] = memory_string_to_int(memfld)
+            # Make node contents into V1ContainerImage
+            for node in self.test_objects["node_contents"]:
+                clist: List[V1ContainerImage] = []
+                for img in self.test_objects["node_contents"][node]:
+                    clist.append(V1ContainerImage(img))
+                self.test_objects["node_contents"][node] = clist
+
         self._canonicalized = True
 
     @property
@@ -173,6 +296,16 @@ class TestObjectFactory:
             n = v.username
             labmap[n] = v
         return labmap
+
+    @property
+    def nodecontents(self) -> NodeContainers:
+        retval: NodeContainers = {}
+        for node in self.test_objects["node_contents"]:
+            clist: List[V1ContainerImage] = []
+            for img in self.test_objects["node_contents"][node]:
+                clist.append(V1ContainerImage(img))
+            retval[node] = clist
+        return retval
 
 
 test_object_factory = TestObjectFactory()
