@@ -24,6 +24,7 @@ from jupyterlabcontroller.dependencies.prepull import (
 )
 from jupyterlabcontroller.dependencies.storage import (
     docker_storage_dependency,
+    gafaelfawr_storage_dependency,
     k8s_storage_dependency,
 )
 from jupyterlabcontroller.main import create_app
@@ -34,10 +35,12 @@ from jupyterlabcontroller.models.domain.usermap import UserMap
 from jupyterlabcontroller.models.v1.lab import UserInfo
 from jupyterlabcontroller.services.prepuller import PrepullerManager
 from jupyterlabcontroller.storage.docker import DockerStorageClient
+from jupyterlabcontroller.storage.gafaelfawr import GafaelfawrStorageClient
 from jupyterlabcontroller.storage.k8s import K8sStorageClient
 
 from .settings import TestObjectFactory, test_object_factory
 from .support.mockdocker import MockDockerStorageClient
+from .support.mockgafaelfawr import MockGafaelfawrStorageClient
 from .support.mockk8s import MockK8sStorageClient
 
 _here = Path(__file__).parent
@@ -104,6 +107,19 @@ async def k8s_storage_client(
         logger=logger,
     )
     return k8s_storage_dependency.k8s_client
+
+
+@pytest_asyncio.fixture
+async def gafaelfawr_storage_client(
+    http_client: AsyncClient,
+    obj_factory: TestObjectFactory,
+) -> GafaelfawrStorageClient:
+    gafaelfawr_storage_dependency.set_state(
+        client=MockGafaelfawrStorageClient(
+            token="", http_client=http_client, test_obj=obj_factory
+        )
+    )
+    return gafaelfawr_storage_dependency.gafaelfawr_client
 
 
 @pytest_asyncio.fixture
@@ -179,6 +195,7 @@ async def context(
     obj_factory: TestObjectFactory,
     k8s_storage_client: K8sStorageClient,
     docker_storage_client: DockerStorageClient,
+    gafaelfawr_storage_client: GafaelfawrStorageClient,
     user_map: UserMap,
     logger: BoundLogger,
 ) -> Context:
@@ -189,6 +206,7 @@ async def context(
         logger=logger,
         k8s_client=k8s_storage_client,
         docker_client=docker_storage_client,
+        gafaelfawr_client=gafaelfawr_storage_client,
         user_map=user_map,
     )
 
@@ -206,27 +224,32 @@ async def username(user: UserInfo) -> str:
 
 
 @pytest_asyncio.fixture
+async def user_token() -> str:
+    return "token-of-affection"
+
+
+@pytest_asyncio.fixture
+async def admin_token() -> str:
+    return "token-of-authority"
+
+
+@pytest_asyncio.fixture
 async def user_context(
-    context: Context, user: UserInfo, obj_factory: TestObjectFactory
+    context: Context, user_token: str, obj_factory: TestObjectFactory
 ) -> Context:
     """Return Context with user data."""
     cp = copy(context)
-    cp.token = "token-of-affection"
-    cp.token_scopes = ["exec:notebook"]
-    cp.user = user
-    assert cp.user is not None
-    cp.namespace = f"{context.namespace}-{cp.user.username}"
+    await cp.patch_with_token(token=user_token)
+    assert "exec:notebook" in cp.token_scopes
     return cp
 
 
 @pytest_asyncio.fixture
 async def admin_context(
-    context: Context, obj_factory: TestObjectFactory
+    context: Context, admin_token: str, obj_factory: TestObjectFactory
 ) -> Context:
     """Return Context with user data."""
     cp = copy(context)
-    cp.token = "token-of-authority"
-    cp.token_scopes = ["admin:jupyterlab"]
-    cp.user = obj_factory.userinfos[1]
-    cp.namespace = f"{context.namespace}-{cp.user.username}"
+    await cp.patch_with_token(token=admin_token)
+    assert "admin:jupyterlab" in cp.token_scopes
     return cp
