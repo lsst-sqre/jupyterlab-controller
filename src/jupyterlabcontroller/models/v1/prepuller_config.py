@@ -157,6 +157,8 @@ class PrepullerConfiguration(CamelCaseModel):
                 v.location += "-docker.pkg.dev"
             if v.location != reg:
                 raise RuntimeError(f"{v.location} != {reg}")
+        else:
+            v.location = values["registry"]
         return v
 
     @property
