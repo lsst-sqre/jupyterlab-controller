@@ -20,7 +20,7 @@ class MockGafaelfawrStorageClient(GafaelfawrStorageClient):
         elif self.token == "token-of-authority":
             return test_object_factory.userinfos[1]
         else:
-            raise RuntimeError("invalid token {self.token}")
+            raise RuntimeError(f"invalid token '{self.token}'")
 
     async def get_scopes(self) -> List[str]:
         scopes: List[str] = []

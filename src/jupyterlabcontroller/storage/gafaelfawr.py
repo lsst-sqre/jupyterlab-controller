@@ -14,7 +14,7 @@ class GafaelfawrStorageClient:
         self.set_token(token)
 
     def _reset_token_info(self) -> None:
-        self._headers = {"Authorization": f"Bearer {self.token}"}
+        self._headers = {"Authorization": f"bearer {self.token}"}
         self._scopes: List[str] = list()
         self._user = None
 

@@ -58,11 +58,6 @@ be in ``test_objects.json`` in that directory.
 
 
 @pytest.fixture
-def logger() -> BoundLogger:
-    return structlog.get_logger(logging.logger_name)
-
-
-@pytest.fixture
 def obj_factory() -> TestObjectFactory:
     filename = str(CONFIG_DIR / "test_objects.json")
     test_object_factory.initialize_from_file(filename)
@@ -70,8 +65,21 @@ def obj_factory() -> TestObjectFactory:
 
 
 @pytest.fixture
-def http_client() -> AsyncClient:
-    return AsyncClient(follow_redirects=True)
+def config() -> Configuration:
+    configuration_dependency.set_filename(f"{CONFIG_DIR}/config.yaml")
+    return configuration_dependency.config
+
+
+@pytest.fixture
+def logger() -> BoundLogger:
+    return structlog.get_logger(logging.logger_name)
+
+
+@pytest.fixture
+def http_client(config: Configuration) -> AsyncClient:
+    return AsyncClient(
+        follow_redirects=True, base_url=config.runtime.instance_url
+    )
 
 
 @pytest_asyncio.fixture
@@ -79,12 +87,6 @@ async def docker_credentials(logger: BoundLogger) -> DockerCredentialsMap:
     filename = str(CONFIG_DIR / "docker_config.json")
     docker_creds = DockerCredentialsMap(filename=filename, logger=logger)
     return docker_creds
-
-
-@pytest.fixture
-def config() -> Configuration:
-    configuration_dependency.set_filename(f"{CONFIG_DIR}/config.yaml")
-    return configuration_dependency.config
 
 
 @pytest.fixture(scope="session")
@@ -159,6 +161,7 @@ async def prepuller_manager(
 async def app(
     k8s_storage_client: K8sStorageClient,
     docker_storage_client: DockerStorageClient,
+    gafaelfawr_storage_client: GafaelfawrStorageClient,
 ) -> AsyncIterator[FastAPI]:
     """Return a configured test application.
 
@@ -170,6 +173,7 @@ async def app(
         storage_clients=StorageClientBundle(
             k8s_client=k8s_storage_client,
             docker_client=docker_storage_client,
+            gafaelfawr_client=gafaelfawr_storage_client,
         ),
     )
     async with LifespanManager(app):
@@ -177,9 +181,13 @@ async def app(
 
 
 @pytest_asyncio.fixture
-async def app_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
+async def app_client(
+    app: FastAPI, config: Configuration
+) -> AsyncIterator[AsyncClient]:
     """Return an ``httpx.AsyncClient`` configured to talk to the test app."""
-    async with AsyncClient(app=app, base_url="https://example.com/") as client:
+    async with AsyncClient(
+        app=app, base_url=config.runtime.instance_url
+    ) as client:
         yield client
 
 
@@ -253,3 +261,29 @@ async def admin_context(
     await cp.patch_with_token(token=admin_token)
     assert "admin:jupyterlab" in cp.token_scopes
     return cp
+
+
+@pytest_asyncio.fixture
+async def admin_client(
+    app: FastAPI, config: Configuration, admin_token: str
+) -> AsyncIterator[AsyncClient]:
+    """Return an ``httpx.AsyncClient`` configured to talk to the test app
+    as a user with 'admin:jupyterlab' privileges."""
+    headers = {"Authorization": f"bearer {admin_token}"}
+    async with AsyncClient(
+        app=app, base_url=config.runtime.instance_url, headers=headers
+    ) as client:
+        yield client
+
+
+@pytest_asyncio.fixture
+async def user_client(
+    app: FastAPI, config: Configuration, user_token: str
+) -> AsyncIterator[AsyncClient]:
+    """Return an ``httpx.AsyncClient`` configured to talk to the test app
+    as a user with 'admin:jupyterlab' privileges."""
+    headers = {"Authorization": f"bearer {user_token}"}
+    async with AsyncClient(
+        app=app, base_url=config.runtime.instance_url, headers=headers
+    ) as client:
+        yield client

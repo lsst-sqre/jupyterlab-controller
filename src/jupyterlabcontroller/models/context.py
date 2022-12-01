@@ -105,6 +105,7 @@ class Context:
         # Getting token from request is async so we can't do it at
         # object creation time
         self.token = token
+        self.logger.warning(f"Patching gf client with token {token}")
         self.gafaelfawr_client.set_token(token)
         self.user = await self.gafaelfawr_client.get_user()
         self.token_scopes = await self.gafaelfawr_client.get_scopes()
