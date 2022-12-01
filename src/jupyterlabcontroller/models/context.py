@@ -105,9 +105,10 @@ class Context:
         # Getting token from request is async so we can't do it at
         # object creation time
         self.token = token
-        self.logger.warning(f"Patching gf client with token {token}")
         self.gafaelfawr_client.set_token(token)
+        self.logger.warning(f"Patched gf client with token '{token}'")
         self.user = await self.gafaelfawr_client.get_user()
+        self.logger.warning(f"user: {self.user}")
         self.token_scopes = await self.gafaelfawr_client.get_scopes()
         self.namespace = (
             f"{self.config.runtime.namespace_prefix}-{self.user.username}"
