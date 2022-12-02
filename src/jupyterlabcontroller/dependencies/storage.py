@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import Depends, Header, Request
+from fastapi import Depends, Request
 from httpx import AsyncClient
 from kubernetes_asyncio.client import ApiClient
 from safir.dependencies.http_client import http_client_dependency
@@ -13,7 +13,6 @@ from ..models.domain.docker import DockerCredentialsMap
 from ..storage.docker import DockerStorageClient
 from ..storage.gafaelfawr import GafaelfawrStorageClient
 from ..storage.k8s import K8sStorageClient
-from ..util import extract_bearer_token
 from .config import configuration_dependency
 from .credentials import docker_credentials_dependency
 
@@ -49,7 +48,7 @@ async def k8s_storage_dependency(
 
 
 async def docker_storage_dependency(
-    request=Request,
+    request: Request,
     config: Configuration = Depends(configuration_dependency),
     http_client: AsyncClient = Depends(http_client_dependency),
     logger: BoundLogger = Depends(logger_dependency),
@@ -64,12 +63,17 @@ async def docker_storage_dependency(
     )
 
 
-async def gafaelfawr_storage_dependency(
-    authorization: str = Header(...),
-    http_client: AsyncClient = Depends(http_client_dependency),
-    logger: BoundLogger = Depends(logger_dependency),
-) -> GafaelfawrStorageClient:
-    token = extract_bearer_token(authorization)
-    return GafaelfawrStorageClient(
-        token=token, http_client=http_client, logger=logger
-    )
+class GafaelfawrStorageDependency:
+    def __init__(self) -> None:
+        self._client: Optional[GafaelfawrStorageClient] = None
+
+    async def __call__(
+        self,
+        http_client: AsyncClient = Depends(http_client_dependency),
+    ) -> GafaelfawrStorageClient:
+        if self._client is None:
+            self._client = GafaelfawrStorageClient(http_client=http_client)
+        return self._client
+
+
+gafaelfawr_storage_dependency = GafaelfawrStorageDependency()

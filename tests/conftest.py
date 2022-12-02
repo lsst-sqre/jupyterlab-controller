@@ -14,6 +14,7 @@ from asgi_lifespan import LifespanManager
 from fastapi import FastAPI
 from httpx import AsyncClient
 from safir import logging
+from safir.dependencies.http_client import http_client_dependency
 from safir.kubernetes import initialize_kubernetes
 from structlog.stdlib import BoundLogger
 
@@ -107,7 +108,9 @@ async def gafaelfawr_storage_client(
     http_client: AsyncClient,
     obj_factory: TestObjectFactory,
 ) -> GafaelfawrStorageClient:
-    return MockGafaelfawrStorageClient(test_obj=obj_factory)
+    return MockGafaelfawrStorageClient(
+        http_client=http_client_dependency(), test_obj=obj_factory
+    )
 
 
 @pytest_asyncio.fixture
