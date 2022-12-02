@@ -1,33 +1,26 @@
 from typing import Any, List, Optional
 
 from httpx import AsyncClient
+from structlog.stdlib import BoundLogger
 
 from ..models.v1.lab import UserInfo
 
 
 class GafaelfawrStorageClient:
-    def __init__(self, token: str, http_client: AsyncClient) -> None:
-        self.token = ""
+    def __init__(
+        self, token: str, http_client: AsyncClient, logger: BoundLogger
+    ) -> None:
+        self.token = token
         self.http_client = http_client
-        self._user: Optional[UserInfo] = None
         self._api_url = "/auth/api/v1"
-        self.set_token(token)
-
-    def _reset_token_info(self) -> None:
         self._headers = {"Authorization": f"bearer {self.token}"}
         self._scopes: List[str] = list()
-        self._user = None
-
-    def set_token(self, token: str) -> None:
-        if token == self.token:
-            return
-        self.token = token
-        self._reset_token_info()
+        self._user: Optional[UserInfo] = None
 
     async def _fetch(self, endpoint: str) -> Any:
-        resp = await self.http_client.get(
-            f"{self._api_url}/{endpoint}", headers=self._headers
-        )
+        url = f"{self._api_url}/{endpoint}"
+        self.logger.debug(f"Gafaelfawr client contacting {url}")
+        resp = await self.http_client.get(url, headers=self._headers)
         return resp.json()
 
     async def get_user(self) -> UserInfo:
@@ -45,6 +38,3 @@ class GafaelfawrStorageClient:
             obj = await self._fetch("token-info")
             self._scopes = obj["scopes"]
         return self._scopes
-
-    async def get_token(self) -> str:
-        return self.token
