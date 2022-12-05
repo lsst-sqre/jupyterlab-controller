@@ -1,22 +1,24 @@
-import asyncio
-
 import pytest
 
 from jupyterlabcontroller.models.v1.prepuller import Image
-from jupyterlabcontroller.services.prepuller import PrepullerManager
+from jupyterlabcontroller.services.prepuller.arbitrator import (
+    PrepullerArbitrator,
+)
 
 
 @pytest.mark.asyncio
-async def test_get_menu_images(prepuller_manager: PrepullerManager) -> None:
-    r = await prepuller_manager.get_menu_images()
+async def test_get_menu_images(
+    prepuller_arbitrator: PrepullerArbitrator,
+) -> None:
+    r = await prepuller_arbitrator.get_menu_images()
     assert "recommended" in r.menu
     assert type(r.menu["recommended"]) is Image
     assert r.menu["recommended"].digest == "sha256:5678"
 
 
 @pytest.mark.asyncio
-async def test_get_prepulls(prepuller_manager: PrepullerManager) -> None:
-    r = await prepuller_manager.get_prepulls()
+async def test_get_prepulls(prepuller_arbitrator: PrepullerArbitrator) -> None:
+    r = await prepuller_arbitrator.get_prepulls()
     assert r.config.docker is not None
     assert r.config.docker.repository == "library/sketchbook"
     assert (
@@ -27,8 +29,8 @@ async def test_get_prepulls(prepuller_manager: PrepullerManager) -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_prepuller(prepuller_manager: PrepullerManager) -> None:
-    await prepuller_manager.run()
-    await asyncio.sleep(0.2)
-    await prepuller_manager.stop()
-    await asyncio.sleep(0.2)
+async def test_run_prepuller(
+    prepuller_arbitrator: PrepullerArbitrator,
+) -> None:
+    # We need an executor here
+    pass  # FIXME
