@@ -6,6 +6,8 @@ from structlog.stdlib import BoundLogger
 
 from ..config import Configuration
 from ..factory import Factory
+from ..services.form import FormManager
+from ..services.lab import LabManager
 from ..storage.docker import DockerStorageClient
 from ..storage.gafaelfawr import GafaelfawrStorageClient
 from ..storage.k8s import K8sStorageClient
@@ -41,6 +43,14 @@ class Context:
     @property
     def docker_client(self) -> DockerStorageClient:
         return self.factory.create_docker_client()
+
+    @property
+    def lab_manager(self) -> LabManager:
+        return self.factory.create_lab_manager()
+
+    @property
+    def form_manager(self) -> FormManager:
+        return self.factory.create_form_manager()
 
     async def get_user(self) -> UserInfo:
         return await self.gafaelfawr_client.get_user(self.token)

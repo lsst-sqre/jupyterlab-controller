@@ -16,7 +16,6 @@ class EventManager:
         self.logger = logger
         self.events = events
 
-    @property
     async def publish(
         self,
     ) -> AsyncGenerator[ServerSentEvent, None]:

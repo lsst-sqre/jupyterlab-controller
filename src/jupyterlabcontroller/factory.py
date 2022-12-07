@@ -17,6 +17,7 @@ from .models.domain.docker import DockerCredentialsMap
 from .models.domain.eventmap import EventMap
 from .models.domain.usermap import UserMap
 from .services.form import FormManager
+from .services.lab import LabManager
 from .services.prepuller.executor import PrepullerExecutor
 from .services.prepuller.state import PrepullerState
 from .services.size import SizeManager
@@ -110,6 +111,20 @@ class Factory:
             lab_sizes=self.get_config().lab.sizes,
         )
 
+    def create_lab_manager(self) -> LabManager:
+        return LabManager(
+            instance_url=self.get_config().runtime.instance_url,
+            manager_namespace=self.get_config().runtime.namespace_prefix,
+            user_map=self.get_user_map(),
+            logger=self._logger,
+            lab_config=self.get_config().lab,
+            k8s_client=self.create_k8s_client(),
+            gafaelfawr_client=self.create_gafaelfawr_client(),
+        )
+
+    # lab_manager and event_manager when we have refactored them to no
+    # longer be per-user?
+
     def create_gafaelfawr_client(self) -> GafaelfawrStorageClient:
         return GafaelfawrStorageClient(http_client=self.get_http_client())
 
@@ -127,6 +142,3 @@ class Factory:
             logger=self._logger,
             http_client=self.get_http_client(),
         )
-
-    # lab_manager and event_manager when we have refactored them to no
-    # longer be per-user?
