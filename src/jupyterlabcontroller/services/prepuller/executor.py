@@ -59,8 +59,8 @@ class PrepullerExecutor:
     async def start(self) -> None:
         self.logger.info("Starting prepuller background tasks")
         self._stopping = False
-        await self._docker_scheduler.spawn(self._docker_refresh)
-        await self._k8s_scheduler.spawn(self._k8s_refresh)
+        await self._docker_scheduler.spawn(self._docker_refresh())
+        await self._k8s_scheduler.spawn(self._k8s_refresh())
         await self._prepuller_scheduler_start()
 
     async def stop(self) -> None:

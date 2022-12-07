@@ -13,6 +13,7 @@ from asgi_lifespan import LifespanManager
 from fastapi import FastAPI
 from httpx import AsyncClient
 from safir import logging
+from safir.dependencies.http_client import http_client_dependency
 from structlog.stdlib import BoundLogger
 
 from jupyterlabcontroller.config import Configuration
@@ -58,13 +59,6 @@ def logger() -> BoundLogger:
     return structlog.get_logger(logging.logger_name)
 
 
-@pytest.fixture
-def http_client(config: Configuration) -> AsyncClient:
-    return AsyncClient(
-        follow_redirects=True, base_url=config.runtime.instance_url
-    )
-
-
 @pytest_asyncio.fixture
 async def docker_credentials(logger: BoundLogger) -> DockerCredentialsMap:
     filename = str(CONFIG_DIR / "docker_config.json")
@@ -108,7 +102,6 @@ async def app_client(
 @pytest_asyncio.fixture
 async def context(
     config: Configuration,
-    http_client: AsyncClient,
     obj_factory: TestObjectFactory,
     logger: BoundLogger,
     factory: Factory,
@@ -117,7 +110,7 @@ async def context(
     """Return a ``Context`` configured to supply dependencies."""
     cc = MockContext(
         test_obj=obj_factory,
-        http_client=http_client,
+        http_client=await http_client_dependency(),
         logger=logger,
         token=token,
         config=config,
