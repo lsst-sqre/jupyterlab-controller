@@ -1,4 +1,5 @@
 import re
+from copy import deepcopy
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -223,9 +224,8 @@ class LabManager:
         self, user: UserInfo, lab: LabSpecification, token: str
     ) -> Dict[str, str]:
         username = user.username
-        data: Dict[str, str] = dict()
-        # Get the static ones from the lab config
-        data.update(self.lab_config.env)
+        # Get the static env vars from the lab config
+        data = deepcopy(self.lab_config.env)
         # Get the stuff from the options form
         options = lab.options
         if options.debug:

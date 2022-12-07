@@ -19,7 +19,6 @@ from .models.context import Context
 from .models.index import Index
 from .models.v1.lab import LabSpecification, UserData
 from .models.v1.prepuller import PrepullerStatus, SpawnerImages
-from .services.events import EventManager
 from .services.prepuller.arbitrator import PrepullerArbitrator
 
 # from sse_starlette.sse import EventSourceResponse
@@ -49,7 +48,7 @@ async def get_lab_users(
     admin_token: str = Depends(admin_token_dependency),
 ) -> List[str]:
     """Returns a list of all users with running labs."""
-    return context.user_map.running
+    return await context.user_map.running()
 
 
 @external_router.get(
@@ -84,18 +83,17 @@ async def get_userdata(
     summary="Create user lab",
 )
 async def post_new_lab(
+    username: str,
     lab: LabSpecification,
     context: Context = Depends(context_dependency),
     user_token: str = Depends(user_token_dependency),
     logger: BoundLogger = Depends(logger_dependency),
 ) -> str:
     """Create a new Lab pod for a given user"""
-    # This can't really happen because we wouldn't have a user token without
-    # one.
     user = await context.get_user()
-    if user is None:
-        raise RuntimeError("Require user from context to create user lab")
-    username = user.username
+    token_username = user.username
+    if token_username != username:
+        raise HTTPException(status_code=403, detail="Forbidden")
     lab_manager = context.lab_manager
     context.logger.debug(f"Received creation request for {username}")
     await lab_manager.create_lab(token=user_token, lab=lab)
@@ -165,14 +163,9 @@ async def get_user_events(
     user_token: str = Depends(user_token_dependency),
 ) -> AsyncGenerator[ServerSentEvent, None]:
     """Returns the events for the lab of the given user"""
-    eventmap = context.event_map.get(username)
-    if eventmap is None:
-        raise RuntimeError(f"User {username} has no event map")
-    event_manager = EventManager(
-        username=username, logger=context.logger, events=eventmap
-    )
+    event_manager = context.event_manager
     # should return EventSourceResponse:
-    return event_manager.publish()
+    return event_manager.publish(username)
 
 
 #

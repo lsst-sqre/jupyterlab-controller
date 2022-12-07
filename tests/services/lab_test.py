@@ -38,7 +38,7 @@ async def test_get_active_users(
     obj_factory: TestObjectFactory,
     user_context: Context,
 ) -> None:
-    users = user_context.user_map.running
+    users = await user_context.user_map.running()
     assert len(users) == 1
     assert users[0] == "wrench"
 
