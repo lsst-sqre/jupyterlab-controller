@@ -6,7 +6,7 @@ services (either Kubernetes or Docker).
 import asyncio
 from typing import Optional
 
-from aoijobs import Scheduler
+from aiojobs import Scheduler
 from structlog.stdlib import BoundLogger
 
 from ...constants import PREPULLER_INTERNAL_POLL_PERIOD, PREPULLER_PULL_TIMEOUT

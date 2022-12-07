@@ -9,7 +9,7 @@ from ..models.v1.prepuller import PrepullerConfiguration
 from ..services.prepuller.arbitrator import PrepullerArbitrator
 from ..services.prepuller.executor import PrepullerExecutor
 from ..services.prepuller.state import PrepullerState
-from ..services.prepuller.tag_client import PrepullerTagClient
+from ..services.prepuller.tag import PrepullerTagClient
 from ..storage.docker import DockerStorageClient
 from ..storage.k8s import K8sStorageClient
 from .config import configuration_dependency

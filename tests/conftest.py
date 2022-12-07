@@ -16,8 +16,8 @@ from safir import logging
 from structlog.stdlib import BoundLogger
 
 from jupyterlabcontroller.config import Configuration
-from jupyterlabcontroller.context import Factory
 from jupyterlabcontroller.dependencies.config import configuration_dependency
+from jupyterlabcontroller.factory import Factory
 from jupyterlabcontroller.main import create_app
 from jupyterlabcontroller.models.context import Context
 from jupyterlabcontroller.models.domain.docker import DockerCredentialsMap
