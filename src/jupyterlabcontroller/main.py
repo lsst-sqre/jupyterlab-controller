@@ -17,6 +17,7 @@ from safir.logging import configure_logging, configure_uvicorn_logging
 from safir.middleware.x_forwarded import XForwardedMiddleware
 
 from .dependencies.config import configuration_dependency
+from .dependencies.prepull import prepuller_executor_dependency
 from .handlers import external_router, internal_router
 
 __all__ = ["create_app"]
@@ -82,11 +83,11 @@ def create_app(
 
 async def startup_event() -> None:
     await initialize_kubernetes()
-    # FIXME -- need executor
-    # await prepuller_arbitrator_dependency.run()
+    executor = await prepuller_executor_dependency()
+    await executor.start()
 
 
 async def shutdown_event() -> None:
-    # FIXME -- need executor
-    # await prepuller_arbitrator_dependency.stop()
+    executor = await prepuller_executor_dependency()
+    await executor.stop()
     await http_client_dependency.aclose()

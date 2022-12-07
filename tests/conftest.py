@@ -18,18 +18,10 @@ from structlog.stdlib import BoundLogger
 from jupyterlabcontroller.config import Configuration
 from jupyterlabcontroller.context import Factory
 from jupyterlabcontroller.dependencies.config import configuration_dependency
-from jupyterlabcontroller.dependencies.prepull import (
-    prepuller_arbitrator_dependency,
-)
 from jupyterlabcontroller.main import create_app
 from jupyterlabcontroller.models.context import Context
 from jupyterlabcontroller.models.domain.docker import DockerCredentialsMap
 from jupyterlabcontroller.models.v1.lab import UserInfo
-from jupyterlabcontroller.services.prepuller.arbitrator import (
-    PrepullerArbitrator,
-)
-from jupyterlabcontroller.storage.docker import DockerStorageClient
-from jupyterlabcontroller.storage.k8s import K8sStorageClient
 
 from .settings import TestObjectFactory, test_object_factory
 from .support.mockcontext import MockContext
@@ -86,22 +78,6 @@ def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
-
-
-@pytest_asyncio.fixture
-async def prepuller_arbitrator(
-    config: Configuration,
-    k8s_storage_client: K8sStorageClient,
-    docker_storage_client: DockerStorageClient,
-    logger: BoundLogger,
-) -> PrepullerArbitrator:
-    prepuller_arbitrator_dependency.set_state(
-        logger=logger,
-        config=config,
-        k8s_client=k8s_storage_client,
-        docker_client=docker_storage_client,
-    )
-    return prepuller_arbitrator_dependency.prepuller_arbitrator
 
 
 @pytest_asyncio.fixture

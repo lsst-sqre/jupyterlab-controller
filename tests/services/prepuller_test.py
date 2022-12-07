@@ -1,9 +1,12 @@
+import asyncio
+
 import pytest
 
 from jupyterlabcontroller.models.v1.prepuller import Image
 from jupyterlabcontroller.services.prepuller.arbitrator import (
     PrepullerArbitrator,
 )
+from jupyterlabcontroller.services.prepuller.executor import PrepullerExecutor
 
 
 @pytest.mark.asyncio
@@ -30,7 +33,10 @@ async def test_get_prepulls(prepuller_arbitrator: PrepullerArbitrator) -> None:
 
 @pytest.mark.asyncio
 async def test_run_prepuller(
-    prepuller_arbitrator: PrepullerArbitrator,
+    prepuller_executor: PrepullerExecutor,
 ) -> None:
-    # We need an executor here
-    pass  # FIXME
+    await prepuller_executor.start()
+    await asyncio.sleep(0.2)
+    # FIXME: do something here
+    await prepuller_executor.stop()
+    await asyncio.sleep(0.2)
