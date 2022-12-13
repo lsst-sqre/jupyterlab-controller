@@ -108,6 +108,7 @@ def create_app(
 
 
 async def startup_event() -> None:
+    global context_dependency
     await initialize_kubernetes()
     if injected_context_dependency is not None:
         context_dependency = injected_context_dependency
